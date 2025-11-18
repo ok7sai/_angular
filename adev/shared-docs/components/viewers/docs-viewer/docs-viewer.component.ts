@@ -23,7 +23,9 @@ import {
   output,
   PendingTasks,
   PLATFORM_ID,
+  signal,
   Type,
+  untracked,
   ViewContainerRef,
   ViewEncapsulation,
 } from '@angular/core';
@@ -61,6 +63,7 @@ export const GITHUB_CONTENT_URL = 'https://github.com/angular/angular/blob/main/
   host: {
     '[class.docs-animate-content]': 'animateContent',
     '[class.docs-with-TOC]': 'hasToc()',
+    '[class.docs-rendered]': 'isRendered()',
   },
 })
 export class DocViewer {
@@ -81,6 +84,8 @@ export class DocViewer {
   private readonly sanitizer = inject(DomSanitizer);
 
   protected animateContent = false;
+  protected isRendered = signal(false);
+  protected processTimeout: ReturnType<typeof setTimeout> | undefined;
   private readonly pendingTasks = inject(PendingTasks);
 
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -92,6 +97,13 @@ export class DocViewer {
       const removeTask = this.pendingTasks.add();
       await this.renderContentsAndRunClientSetup(this.docContent());
       removeTask();
+
+      if (!untracked(() => this.isRendered())) {
+        clearTimeout(this.processTimeout);
+        this.processTimeout = setTimeout(() => {
+          this.isRendered.set(true);
+        }, 500);
+      }
     });
   }
 
