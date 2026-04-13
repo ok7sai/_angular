@@ -15,6 +15,7 @@ export {
   Profiler as ɵProfiler,
   ProfilerEvent as ɵProfilerEvent,
 } from '../primitives/devtools';
+export {ɵonViewMove, ɵgetViewIndex} from './render3/view/container';
 export {compileNgModuleFactory as ɵcompileNgModuleFactory} from './application/application_ngmodule_factory_compiler';
 export {injectChangeDetectorRef as ɵinjectChangeDetectorRef} from './change_detection/change_detector_ref';
 export {createInjector as ɵcreateInjector} from './di/create_injector';

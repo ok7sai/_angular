@@ -463,12 +463,17 @@ export const enum LViewFlags {
   HasChildViewsToRefresh = 1 << 13,
 
   /**
-   * This is the count of the bits the 1 was shifted above (base 10)
+   * Indicates that this LView has view move listeners registered on it.
    */
-  IndexWithinInitPhaseShift = 14,
+  HasViewMoveListeners = 1 << 14,
 
   /**
-   * Index of the current init phase on last 21 bits
+   * This is the count of the bits the 1 was shifted above (base 10)
+   */
+  IndexWithinInitPhaseShift = 15,
+
+  /**
+   * Index of the current init phase on last 20 bits
    */
   IndexWithinInitPhaseIncrementer = 1 << IndexWithinInitPhaseShift,
 

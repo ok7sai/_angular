@@ -20,6 +20,8 @@ import {TNode} from '../interfaces/node';
 import {RComment, RElement} from '../interfaces/renderer_dom';
 import {isLView} from '../interfaces/type_checks';
 import {
+  CHILD_HEAD,
+  CONTEXT,
   DECLARATION_COMPONENT_VIEW,
   DECLARATION_LCONTAINER,
   FLAGS,
@@ -42,6 +44,41 @@ import {
   removeViewFromDOM,
 } from '../node_manipulation';
 import {updateAncestorTraversalFlagsOnAttach} from '../util/view_utils';
+import {readPatchedLView} from '../context_discovery';
+import {TYPE} from '../interfaces/container';
+import {getLView} from '../state';
+
+const viewMoveCallbacks = new WeakMap<LView, Array<() => void>>();
+
+export function ɵonViewMove(callback: () => void): void {
+  const lView = getLView();
+  if (lView) {
+    lView[FLAGS] |= LViewFlags.HasViewMoveListeners;
+    let callbacks = viewMoveCallbacks.get(lView);
+    if (!callbacks) {
+      callbacks = [];
+      viewMoveCallbacks.set(lView, callbacks);
+    }
+    callbacks.push(callback);
+  }
+}
+
+function notifyViewMoved(lView: LView): void {
+  const callbacks = viewMoveCallbacks.get(lView);
+  if (callbacks) {
+    for (const callback of callbacks) {
+      callback();
+    }
+  }
+
+  let child = lView[CHILD_HEAD];
+  while (child !== null) {
+    if (isLView(child)) {
+      notifyViewMoved(child);
+    }
+    child = child[NEXT];
+  }
+}
 
 /**
  * Creates a LContainer, either from a container instruction, or for a ViewContainerRef.
@@ -114,6 +151,10 @@ export function addLViewToLContainer(
     if (parentRNode !== null) {
       addViewToDOM(tView, lContainer[T_HOST], renderer, lView, parentRNode, beforeNode);
     }
+  }
+
+  if ((lView[FLAGS] & LViewFlags.HasViewMoveListeners) !== 0) {
+    notifyViewMoved(lView);
   }
 
   // When in hydration mode, reset the pointer to the first child in
@@ -257,4 +298,26 @@ export function trackMovedView(declarationContainer: LContainer, lView: LView) {
   } else {
     movedViews.push(lView);
   }
+}
+
+export function ɵgetViewIndex(element: any): number {
+  let lView = readPatchedLView(element);
+  if (!lView) return -1;
+
+  let parent = lView[PARENT];
+  while (parent && parent[TYPE] !== true) {
+    if (isLView(parent)) {
+      lView = parent;
+      parent = lView[PARENT];
+    } else {
+      break;
+    }
+  }
+
+  if (parent && parent[TYPE] === true) {
+    const lContainer = parent as LContainer;
+    return lContainer.indexOf(lView, CONTAINER_HEADER_OFFSET) - CONTAINER_HEADER_OFFSET;
+  }
+
+  return -1;
 }
